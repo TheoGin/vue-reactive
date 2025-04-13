@@ -1,89 +1,113 @@
 import { reactive } from "./reactive.js";
 
-const obj = {
-  a: 0,
-  b: 2,
-  // 为什么this指向代理对象才能收集到a和b?
-  get c() {
-    console.log(this); // this指向是obj，应为代理对象才能收集到a和b
-    // this ---> Proxy(Object) {a: 0, b: 2, d: {…}}
-    return this.a + this.b;
-  },
-  d: {
-    e: 3,
-    f: {
-      g: 4
-    }
-  }
-};
+// 【数组】
+// const arr = [1, 2, 3];
+// const state = reactive(arr);
 
-// state.a = 3;
-// state.a++;
-
-// 1. 监听：对象——>代理
-// // 1-1. 传的不是对象
-// const state = reactive(123);
-// console.log(state);
-
-// // 1-2. 传的是同一个对象，state1 === state2 false，应为true ——> WeakMap
-// const state1 = reactive(obj);
-// const state2 = reactive(obj);
-// console.log(state1 === state2);
-
-// // 2. 读信息：依赖收集
-// const state = reactive(obj);
-// // 2-1. get c() {   return this.a + this.b; }，依赖收集只有c，依赖收集应为a, b, c ——> Reflect.get ( target, propertyKey [ , receiver ] )，通过receiver改变this指向为代理对象
+// 1. 监听：对象——>代理（数组和对象一样）
+// 2. 读信息：依赖收集
+// // 2-1. 通过下标读
 // function fn() {
-//   state.c
+//   state[0] // 0就是键key ---> 依赖收集[get]0
 // }
 
-// // 2-2. d: {    e: 3  } 依赖收集只有d，依赖收集应为d, e，嵌套对象也需要代理 ——> 递归
-// const state = reactive(obj);
+// // 2-2. 通过for循环遍历读
 // function fn() {
-//   state.d.e;
-//   state.d.f.g;
+//   for(let i = 0; i < state.length; i++) {
+//     state[i]
+//   }
+//   /**
+//    * 依赖收集[get]length
+//    * 依赖收集[get]0
+//    * 依赖收集[get]length
+//    * 依赖收集[get]1
+//    * 依赖收集[get]length
+//    * 依赖收集[get]2
+//    * 依赖收集[get]length
+//    */
 // }
 
-// // 2-3. "k" in obj 没有依赖收集；一开始没有某个属性，后面有某个属性，会影响函数的结果，所以也应该收集依赖
-// /* in --内部方法--> [[HasProperty]]
-// 【Internal Method】 【Proxy Handler Method】
-//  [[HasProperty]]           has
-// */
-// const state = reactive(obj);
+// // 2-3. 通过for-of遍历读，会出现Uncaught TypeError: Cannot convert a Symbol value to a string. 因为for-of的键是：Symbol(Symbol.iterator)，通过迭代器遍历。 console.log(`%c依赖收集[${type}]${key}`, 'color: #f00');改为 ---> console.log(`%c依赖收集[${type}]`, 'color: #f00', key);
 // function fn() {
-//   "k" in state;
-// }
-// fn();
-// state.k = 111;
-
-// // 2-4. for(const key in state) { } | Object.keys(state) 没有依赖收集；一开始不存在，后面存在，会影响函数的结果，所以也应该收集依赖
-// const state = reactive(obj);
-// function fn() {
-//   for(const key in state) { }
-//   Object.keys(state)
+//   for(const i of state) {
+//     i
+//   }
+//   /**
+//    * 依赖收集[get] Symbol(Symbol.iterator)
+//    * 依赖收集[get] length
+//    * 依赖收集[get] 0
+//    * 依赖收集[get] length
+//    * 依赖收集[get] 1
+//    * 依赖收集[get] length
+//    * 依赖收集[get] 2
+//    * 依赖收集[get] length
+//    */
 // }
 
-// 3. 写信息：派发更新
-// // 3-1. 原有有这个属性——>修改；原来没有这个属性——>添加
-// const state = reactive(obj);
+// // 2-4. 通过includes(searchElement) 方法用来判断一个数组是否包含一个指定的值
 // function fn() {
-//   state.abc = 11
-//   state.a = 11
+//   console.log(state.includes(2)); // 2是searchElement
+//   /**
+//    * 依赖收集[get] includes
+//    * 依赖收集[get] length
+//    * 依赖收集[get] 0
+//    * 依赖收集[get] 1
+//    * true
+//    */
 // }
 
-// // 3-2. 删除一个不存在的属性，不应该派发更新
-// const state = reactive(obj);
+// // 2-5. 通过lastIndexOf(searchElement) 方法返回数组中给定元素最后一次出现的索引，如果不存在则返回 -1。
+// const arr = [1, 2, , ,]; // 稀疏数组
+// const state = reactive(arr);
 // function fn() {
-//   delete state.abc
-//   delete state.a
+//   console.log(state.lastIndexOf(5));
+//   /**
+//    * 依赖收集[get] lastIndexOf
+//    * 依赖收集[get] length
+//    * 依赖收集[has] 3
+//    * 依赖收集[has] 2
+//    * 依赖收集[has] 1
+//    * 依赖收集[get] 1
+//    * 依赖收集[has] 0
+//    * 依赖收集[get] 0
+//    * -1
+//    */
 // }
 
-// // 3-2. 相同值不应该set修改
-const state = reactive(obj);
+// // 2-6. 通过indexOf(searchElement) 方法返回数组中第一次出现给定元素的下标，如果不存在则返回 -1。
+// const arr = [1, 2, 3]; 
+// const state = reactive(arr);
+// function fn() {
+//   console.log(state.indexOf(2));
+//   /**
+//    * 依赖收集[get] indexOf
+//    * 依赖收集[get] length
+//    * 依赖收集[has] 0
+//    * 依赖收集[get] 0
+//    * 依赖收集[has] 1
+//    * 依赖收集[get] 1
+//    * 1
+//    */
+// }
+
+// 2-7. 嵌套对象找，数组中明明有obj，但却返回-1，因为state[1]是：Proxy(Object) {}代理对象；而obj是： {}原始对象。 ---> 从代理对象中找，如果找不到再从原始对象找（改写查找方法的this）
+const obj = {}
+const arr = [1, obj, 3];
+const state = reactive(arr);
 function fn() {
-  1/state.a
+  // console.log(state[1], obj); // Proxy(Object) {} {}
+  console.log(state.indexOf(obj));
+  /**
+   * 依赖收集[get] indexOf
+   * 依赖收集[get] length
+   * 依赖收集[has] 0
+   * 依赖收集[get] 0
+   * 依赖收集[has] 1
+   * 依赖收集[get] 1
+   * 依赖收集[has] 2
+   * 依赖收集[get] 2
+   * -1
+   */
 }
-
-state.a = -0;
 
 fn();

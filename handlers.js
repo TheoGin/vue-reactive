@@ -3,9 +3,41 @@ import { reactive } from "./reactive.js";
 import { TrackOpType, TriggerOpType } from "./operations.js";
 import { hasChanged, isObject } from "./utils.js";
 
+// const arrayInstrumentations = { // instrumentation仪器仪表
+//     includes: () => {},
+//     lastIndexOf: () => {},
+//     indexOf: () => {},
+// }
+// 每个方法里面做的事情一样————》
+const arrayInstrumentations = {};
+const RAW = Symbol('raw');
+['includes', 'lastIndexOf', 'indexOf'].forEach(key => {
+    arrayInstrumentations[key] = function(...args) {
+        console.log(123);
+        // this ---> Proxy
+        // 1. 从代理对象中找
+        const res =  Array.prototype[key].apply(this, args)
+        // 2. 如果找不到再从原始对象找
+        if(res < 0 || res === false) { // lastIndexOf, lastIndexOf没找到返回-1 或者！！！ includes没找到返回false
+            return Array.prototype[key].apply(this[RAW], args) // this.RAW错误写法；应该this[RAW]，会调用get，就会触发key === RAW
+        }
+        return res
+    }
+})
+
 function get(target, key, receiver){ // receiver会受到一个代理对象Proxy
+
     // 依赖收集
     track(target, TrackOpType.GET, key);
+
+    if(key === RAW) {
+        return target
+    }
+
+    // if(key === 'includes' || key === 'lastIndexOf' || key === 'indexOf') { // 可改写为arrayInstrumentations.hasOwnProperty(key)
+    if(arrayInstrumentations.hasOwnProperty(key) && Array.isArray(target)) { // 还要判断target是否为数组！！！
+        return arrayInstrumentations[key]; // arrayInstrumentations[key]是改动之后的方法
+    }
 
     // Reflect.get ( target, propertyKey [ , receiver ] )。Receiver is used as the this value
     // 通过receiver改变this指向为代理对象

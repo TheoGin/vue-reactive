@@ -6,10 +6,10 @@ export function track(target, type, key){
         console.log(`%c依赖收集[${type}]`, 'color: #f00');
         return;
     }
-    console.log(`%c依赖收集[${type}]${key}`, 'color: #f00');// #f00红色
+    console.log(`%c依赖收集[${type}]`, 'color: #f00', key);// #f00红色
 }
 
 // 派发更新
 export function trigger(target, type, key) {
-    console.log(`%c派发更新[${type}]${key}`, 'color: #00f'); // #00f蓝色
+    console.log(`%c派发更新[${type}]`, 'color: #00f', key); // #00f蓝色
 }
