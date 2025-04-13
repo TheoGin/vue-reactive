@@ -3,18 +3,18 @@ import { reactive } from "./reactive.js";
 const obj = {
   a: 0,
   b: 2,
-  // // 为什么this指向代理对象才能收集到a和b?
-  // get c() {
-  //   console.log(this); // this指向是obj，应为代理对象才能收集到a和b
-  //   // this ---> Proxy(Object) {a: 0, b: 2, d: {…}}
-  //   return this.a + this.b;
-  // },
-  // d: {
-  //   e: 3,
-  //   f: {
-  //     g: 4
-  //   }
-  // }
+  // 为什么this指向代理对象才能收集到a和b?
+  get c() {
+    console.log(this); // this指向是obj，应为代理对象才能收集到a和b
+    // this ---> Proxy(Object) {a: 0, b: 2, d: {…}}
+    return this.a + this.b;
+  },
+  d: {
+    e: 3,
+    f: {
+      g: 4
+    }
+  }
 };
 
 // state.a = 3;
@@ -78,12 +78,12 @@ const obj = {
 //   delete state.a
 // }
 
-// 3-2. 相同值不应该set修改
+// // 3-2. 相同值不应该set修改
 const state = reactive(obj);
 function fn() {
   1/state.a
 }
 
-state.a = 0;
+state.a = -0;
 
 fn();

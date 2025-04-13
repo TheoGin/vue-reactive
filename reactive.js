@@ -28,7 +28,7 @@ export function reactive(target) {
         return target;
     }
     if(targetMap.has(target)) {
-        return targetMap.get(target);
+        return targetMap.get(target);// 如果已经代理过了，直接返回
     }
     // 代码臃肿——》抽离handlers模块
     const proxy = new Proxy(target, handlers)

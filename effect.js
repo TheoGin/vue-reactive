@@ -1,4 +1,4 @@
-import { TrackOpType } from "./OpType.js";
+import { TrackOpType } from "./operations.js";
 
 // 依赖收集
 export function track(target, type, key){
