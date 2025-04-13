@@ -17,20 +17,21 @@
 // // --->
 // const proxy = reactive(data2);
 
-import { track, trigger } from './effect.js'
+import { handlers } from './handlers.js';
+import { isObject } from './utils.js';
 
+// 用WeakMap缓存，因为WeakMap是弱引用，只要它们没有其他的引用存在，会进行垃圾回收。
+const targetMap = new WeakMap(); 
 export function reactive(target) {
-    return new Proxy(target, {
-        get(target, key){
-            // 依赖收集
-            track(target, key);
-            return target[key]; // 返回对象的相应属性值
-        },
-        set(target, key, value){
-            // 派发更新
-            trigger(target, key);
-            // proxy里面的set需要返回一个boolean值，表示 赋值成功true | 赋值失败 ---> 
-            return Reflect.set(target, key, value); // 设置对象的相应属性值。相当于target[key] = value，但反射赋值会返回一个boolean值
-        },
-    })
+    // 传的不是对象，直接返回 值
+    if(!isObject(target)) {
+        return target;
+    }
+    if(targetMap.has(target)) {
+        return targetMap.get(target);
+    }
+    // 代码臃肿——》抽离handlers模块
+    const proxy = new Proxy(target, handlers)
+    targetMap.set(target, proxy)
+    return proxy;
 }
