@@ -24,7 +24,7 @@ export function resumeTracking() {
   shouldTrack = true;
 }
 
-export function effect(fn, options) {
+export function effect(fn, options = {}) {
   const { lazy = false } = options;
   const effectFn = () => {
     try {
@@ -115,6 +115,9 @@ export function track(target, type, key) {
 // 派发更新
 export function trigger(target, type, key) {
   const effectFns = getEffectFns(target, type, key);
+  if(!effectFns) { // effectFns可能是undefined
+    return;
+  }
   for (const effectFn of effectFns) {
     // 依赖收集是当前这个函数fn()，就return
     if (effectFn === activeEffect) {
