@@ -16,6 +16,8 @@ export function effect(fn) {
     function effectFn() {
         try{
             activeEffect = effectFn;
+            // 每次调用前先清除之前收集的依赖，以便重新依赖收集。
+            cleanup(effectFn);
             // 为啥还要return ？
             return fn(); // fn函数里面用到某个响应式数据，就会触发依赖收集
         } finally {
@@ -23,7 +25,23 @@ export function effect(fn) {
             activeEffect = null;
         }
     }
+    // 给effectFn加一个属性，记录哪些集合存着effectFn。即effectFn.depSet = [第一个集合，第二个集合，……]。通过这种方式重新依赖收集。
+    effectFn.depSet = [] // 用来记录哪些集合存着effectFn
     effectFn();
+}
+
+// 清除之前收集的依赖
+function cleanup(effectFn) {
+    const {depSet} = effectFn;
+    if(!depSet.length) { // 之前没有收集这个依赖，return
+        return;
+    }
+    for (const dep of depSet) {
+        // 从dep集合中去掉effectFn这个函数
+        dep.delete(effectFn);
+    }
+    // 还要effectFn.depSet = [第一个集合，第二个集合，……]改为 effectFn.depSet = []，即设置为空
+    depSet.length = 0;
 }
 
 // 暂停依赖收集
@@ -66,6 +84,8 @@ export function track(target, type, key){
     }
     if(!depSet.has(activeEffect)) {
         depSet.add(activeEffect);
+        // effectFn.depSet = [第一个集合，第二个集合，……]。通过这种方式重新依赖收集。
+        activeEffect.depSet.push(depSet)
     }
     // console.log(targetMap);
 

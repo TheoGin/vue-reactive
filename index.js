@@ -108,25 +108,69 @@ const state = reactive(obj);
 //  * fn
 //  */
 
-// 5.2 没有依赖就不会调
-function fn1() {
-  console.log('fn1');
-  state.a; // state.c添加了，但是fn1()没有用到，所以不会再执行
-}
+// // 5.2 没有依赖就不会调
+// function fn1() {
+//   console.log('fn1');
+//   state.a; // state.c添加了，但是fn1()没有用到，所以不会再执行
+// }
 
-effect(fn1);
+// effect(fn1);
 
+// function fn() {
+//   console.log('fn');
+//   // state.c
+//   for (const key in state) { }
+// }
+
+// effect(fn);
+
+// state.c = 3
+// /**
+//  * fn1
+//  * fn
+//  * fn
+//  */
+
+// // 6.1. 需要重新依赖收集情况。两种方法。
+// // （1）遍历整个targetMap，找到fn去掉再重新添加，太麻烦
+// // （2）给effectFn加一个属性，记录哪些集合存着effectFn。即effectFn.depSet = [第一个集合，第二个集合，……]。通过这种方式重新依赖收集。
+// function fn() {
+//   console.log('fn');
+//   if(state.a === 1) {
+//     state.b
+//   }else {
+//     state.c
+//   }
+// }
+
+// effect(fn); // 触发：fn()函数重新执行
+// state.a = 2 // 触发：fn()函数重新执行
+// state.b = 5 // 触发：fn()函数重新执行。但expect: 不会触发，因为 state.a 已经变为2 ————> 需要重新依赖收集
+
+// // 6.2. 重新依赖收集后
+// function fn() {
+//   console.log('fn');
+//   if(state.a === 1) {
+//     state.b
+//   }else {
+//     state.c
+//   }
+// }
+
+// effect(fn); // 触发：fn()函数重新执行
+// state.a = 2 // 触发：fn()函数重新执行
+// state.b = 5 // 重新依赖收集后 不会触发：fn()函数重新执行
+
+// 6.3. 重新依赖收集后
 function fn() {
   console.log('fn');
-  // state.c
-  for (const key in state) { }
+  if(state.a === 1) {
+    state.b
+  }else {
+    state.c
+  }
 }
 
-effect(fn);
-
-state.c = 3
-/**
- * fn1
- * fn
- * fn
- */
+effect(fn); // 触发：fn()函数重新执行
+state.a = 2 // 触发：fn()函数重新执行
+state.c = 5 // 会触发：fn()函数重新执行！！
