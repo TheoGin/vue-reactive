@@ -66,33 +66,67 @@ const state = reactive(obj);
 // state.a = 2
 // effect(fn);
 
-// 4. 两个函数都依赖state.a 和 state.b ————> depSet就会有两个函数
-/*
-value: Set(2)
-[[Entries]]
-0: function effectFn() { try{ activateEffect = effectFn;  return fn();  } finally {  activateEffect = null; } }
-1: function effectFn() { try{ activateEffect = effectFn;  return fn();  } finally {  activateEffect = null; } }
-size: 2
-*/
+// // 4. 两个函数都依赖state.a 和 state.b ————> depSet就会有两个函数
+// /*
+// value: Set(2)
+// [[Entries]]
+// 0: function effectFn() { try{ activateEffect = effectFn;  return fn();  } finally {  activateEffect = null; } }
+// 1: function effectFn() { try{ activateEffect = effectFn;  return fn();  } finally {  activateEffect = null; } }
+// size: 2
+// */
+// function fn() {
+//   if(state.a == 1) {
+//     state.b
+//   } else {
+//     state.c;
+//   }
+// }
+
+// effect(fn);
+
+// // 5.1 propMap拿到的可能是不止一种，如`state.c`有get，但 `for (const key in state) { }` 还有iterate
+// function fn1() {
+//   console.log('fn1');
+//   state.c;
+// }
+
+// effect(fn1);
+
+// function fn() {
+//   console.log('fn');
+//   // state.c
+//   for (const key in state) { }
+// }
+
+// effect(fn);
+
+// state.c = 3
+// /**
+//  * fn1
+//  * fn
+//  * fn1
+//  * fn
+//  */
+
+// 5.2 没有依赖就不会调
+function fn1() {
+  console.log('fn1');
+  state.a; // state.c添加了，但是fn1()没有用到，所以不会再执行
+}
+
+effect(fn1);
+
 function fn() {
-  if(state.a == 1) {
-    state.b
-  } else {
-    state.c;
-  }
+  console.log('fn');
+  // state.c
+  for (const key in state) { }
 }
 
 effect(fn);
 
-state.a = 2
-
-function fn2() {
-  if(state.a == 1) {
-    state.b
-  } else {
-    state.c;
-  }
-}
-
-effect(fn2);
-
+state.c = 3
+/**
+ * fn1
+ * fn
+ * fn
+ */

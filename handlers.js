@@ -1,6 +1,6 @@
 import { track, trigger, pauseTracking, resumeTracking } from "./effect.js";
 import { reactive } from "./reactive.js";
-import { TrackOpType, TriggerOpType } from "./operations.js";
+import { TrackOpTypes, TriggerOpTypes } from "./operations.js";
 import { hasChanged, isObject } from "./utils.js";
 
 // const arrayInstrumentations = { // instrumentation仪器仪表
@@ -39,7 +39,7 @@ function get(target, key, receiver) {
   // receiver会受到一个代理对象Proxy
 
   // 依赖收集
-  track(target, TrackOpType.GET, key);
+  track(target, TrackOpTypes.GET, key);
 
   if (key === RAW) {
     return target;
@@ -68,8 +68,8 @@ function set(target, key, value, receiver) {
 
   // 判断类型
   const type = target.hasOwnProperty(key)
-    ? TriggerOpType.SET
-    : TriggerOpType.ADD;
+    ? TriggerOpTypes.SET
+    : TriggerOpTypes.ADD;
 
   const oldLen = Array.isArray(target) ? target.length : undefined;
 
@@ -86,7 +86,7 @@ function set(target, key, value, receiver) {
     return result;
   }
   const newLen = Array.isArray(target) ? target.length : undefined;
-  if (hasChanged(oldValue, value) || type === TriggerOpType.ADD) {
+  if (hasChanged(oldValue, value) || type === TriggerOpTypes.ADD) {
     // 派发更新
     trigger(target, type, key);
     // 设置的不是length属性 派发更新后需要做的事情
@@ -96,13 +96,13 @@ function set(target, key, value, receiver) {
       if (key !== "length") {
         // 3. 设置的不是length属性
         // ————》手动触发length属性的变化
-        trigger(target, TriggerOpType.SET, "length");
+        trigger(target, TriggerOpTypes.SET, "length");
       } else {
         // 设置是length属性
         // length变小，手动触发delete
         for (let i = newLen; i < oldLen; i++) {
           // 找到那些被删除的下标，依次触发派发更新
-          trigger(target, TriggerOpType.DELETE, i.toString()); // i.toString() 保持key都是字符串
+          trigger(target, TriggerOpTypes.DELETE, i.toString()); // i.toString() 保持key都是字符串
         }
       }
     }
@@ -113,13 +113,13 @@ function set(target, key, value, receiver) {
 function ownKeys(target) {
   // Reflect.ownKeys(target)只有一个参数
   // 依赖收集
-  track(target, TrackOpType.ITERATE);
+  track(target, TrackOpTypes.ITERATE);
   return Reflect.ownKeys(target);
 }
 
 function has(target, key) {
   // 依赖收集
-  track(target, TrackOpType.HAS, key);
+  track(target, TrackOpTypes.HAS, key);
   return Reflect.has(target, key);
 }
 
@@ -129,7 +129,7 @@ function deleteProperty(target, key) {
   if (hadKey && result) {
     // 原有有这个属性，并且删除成功
     // 派发更新
-    trigger(target, TriggerOpType.DELETE, key);
+    trigger(target, TriggerOpTypes.DELETE, key);
   }
   return result;
 }
