@@ -4,7 +4,6 @@ import { effect } from "./effect.js";
 const obj = {
   a: 1,
   b: 2,
-  c: 3
 };
 const state = reactive(obj);
 
@@ -43,26 +42,57 @@ const state = reactive(obj);
 // // 标记fn这个函数对应的依赖
 // effect(fn);
 
-// 3. 目前fn依赖的是 state.a 和 state.b；但是如果state.a = 2，则依赖就会变成 state.a 和 state.c
+// // 3. 目前fn依赖的是 state.a 和 state.b；但是如果state.a = 2，则依赖就会变成 state.a 和 state.c
+// /*
+// if(state.a == 1) {
+//   state.b
+// } else {
+//   state.c;
+// }
+//   为什么state.a = 2之后重新调用的是上面这几行？
+//   ————> activateEffect 不能只收集 fn ，而activateEffect要收集 { activateEffect = fn;  fn();  activateEffect = null; } 这三行
+//   ————> 以便依赖 从state.a 和 state.b 变到  state.a 和 state.c，会重新收集依赖
+// */
+// function fn() {
+//   if(state.a == 1) {
+//     // console.log('state.b');
+//     state.b
+//   } else {
+//     // console.log('state.c');
+//     state.c;
+//   }
+// }
+
+// state.a = 2
+// effect(fn);
+
+// 4. 两个函数都依赖state.a 和 state.b ————> depSet就会有两个函数
 /*
-if(state.a == 1) {
-  state.b
-} else {
-  state.c;
-}
-  为什么state.a = 2之后重新调用的是上面这几行？
-  ————> activateEffect 不能只收集 fn ，而activateEffect要收集 { activateEffect = fn;  fn();  activateEffect = null; } 这三行
-  ————> 以便依赖 从state.a 和 state.b 变到  state.a 和 state.c，会重新收集依赖
+value: Set(2)
+[[Entries]]
+0: function effectFn() { try{ activateEffect = effectFn;  return fn();  } finally {  activateEffect = null; } }
+1: function effectFn() { try{ activateEffect = effectFn;  return fn();  } finally {  activateEffect = null; } }
+size: 2
 */
 function fn() {
   if(state.a == 1) {
-    console.log('state.b');
     state.b
   } else {
-    console.log('state.c');
     state.c;
   }
 }
 
-state.a = 2
 effect(fn);
+
+state.a = 2
+
+function fn2() {
+  if(state.a == 1) {
+    state.b
+  } else {
+    state.c;
+  }
+}
+
+effect(fn2);
+

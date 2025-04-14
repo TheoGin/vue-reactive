@@ -1,4 +1,4 @@
-import { TrackOpType } from "./operations.js";
+import { TrackOpType, TriggerOpType } from "./operations.js";
 
 let shoudTrack = true; // 是否应该依赖收集
 
@@ -9,6 +9,8 @@ let shoudTrack = true; // 是否应该依赖收集
  */
 const targetMap = new WeakMap();
 let activateEffect = undefined;
+// 
+const ITERATE_KEY = Symbol('iter')
 
 export function effect(fn) {
     function effectFn() {
@@ -40,17 +42,59 @@ export function track(target, type, key){
         // 不依赖收集
         return;
     }
-    // 收集
-    console.log(activateEffect);
-
-    if(type === TrackOpType.ITERATE) {
-        console.log(`%c依赖收集[${type}]`, 'color: #f00');
-        return;
+    // 建立对应关系
+    let propMap = targetMap.get(target);
+    if(!propMap) {
+        propMap = new Map();
+        targetMap.set(target, propMap);
     }
-    console.log(`%c依赖收集[${type}]`, 'color: #f00', key);// #f00红色
+    // 特殊情况：迭代没有属性，用Symbol造一个，如 iter
+    if(type === TriggerOpType.ITERATE) {
+        // target.ITERATE_KEY 错误写法
+        key = ITERATE_KEY;
+    }
+    let typeMap = propMap.get(key);
+    if(!typeMap) {
+        typeMap = new Map();
+        propMap.set(key, typeMap)
+    }
+    let depSet = typeMap.get(type);
+    if(!depSet) {
+        depSet = new Set();
+        typeMap.set(type, depSet)
+    }
+    if(!depSet.has(activateEffect)) {
+        depSet.add(activateEffect);
+    }
+    console.log(targetMap);
+    
+
+    // // 如何获取？
+    // console.log(activateEffect);
+
+    // if(type === TrackOpType.ITERATE) {
+    //     console.log(`%c依赖收集[${type}]`, 'color: #f00');
+    //     return;
+    // }
+    // console.log(`%c依赖收集[${type}]`, 'color: #f00', key);// #f00红色
 }
 
 // 派发更新
 export function trigger(target, type, key) {
-    console.log(`%c派发更新[${type}]`, 'color: #00f', key); // #00f蓝色
+    // 抽离函数
+    let propMap = targetMap.get(target);
+    if(!propMap) return;
+    let typeMap = propMap.get(key);
+    if(!typeMap) return;
+    let depSet = undefined;
+    if(type === TriggerOpType.SET) {
+        depSet = typeMap.get(TrackOpType.GET);
+    }
+    if(!depSet) return;
+    // 找到对应函数，依次运行
+    for(const depFn in depSet.values()) {
+        depFn()
+    }
+
+    // console.log(`%c派发更新[${type}]`, 'color: #00f', key); // #00f蓝色
 }
