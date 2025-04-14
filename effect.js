@@ -8,13 +8,18 @@ let shoudTrack = true; // 是否应该依赖收集
  * ……
  */
 const targetMap = new WeakMap();
-let activateEffect = null;
+let activateEffect = undefined;
 
 export function effect(fn) {
     function effectFn() {
-        activateEffect = effectFn;
-        fn(); // fn函数里面用到某个响应式数据，就会触发依赖收集
-        activateEffect = null;
+        try{
+            activateEffect = effectFn;
+            // 为啥还要return ？
+            return fn(); // fn函数里面用到某个响应式数据，就会触发依赖收集
+        } finally {
+            // 函数可能报错，无论如何都要执行下面这行代码
+            activateEffect = null;
+        }
     }
     effectFn();
 }
@@ -31,7 +36,7 @@ export function resumeTracking() {
 
 // 依赖收集
 export function track(target, type, key){
-    if(!shoudTrack) { 
+    if(!shoudTrack || !activateEffect) { // 添加activateEffect没东西，也不需要依赖收集
         // 不依赖收集
         return;
     }
