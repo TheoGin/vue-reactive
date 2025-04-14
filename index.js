@@ -32,7 +32,7 @@ const state = reactive(obj);
 // // //  这个场景比如在react里面
 // // function render() {
 // //   function render2() {
-// //     let data = method(); 
+// //     let data = method();
 // //     // 调用method()方法返回的数据，应该记录的是method()依赖method里面的数据 ？还是记录的是render2()依赖method里面的数据 ？还是记录的是render()依赖method里面的数据 ？
 // //     // ————> 打标记，由用户自己来定，类似于 reactive(obj)
 // //     // ————> effect(fn)
@@ -161,16 +161,118 @@ const state = reactive(obj);
 // state.a = 2 // 触发：fn()函数重新执行
 // state.b = 5 // 重新依赖收集后 不会触发：fn()函数重新执行
 
-// 6.3. 重新依赖收集后
+// // 6.3. 重新依赖收集后
+// function fn() {
+//   console.log('fn');
+//   if(state.a === 1) {
+//     state.b
+//   }else {
+//     state.c
+//   }
+// }
+
+// effect(fn); // 触发：fn()函数重新执行
+// state.a = 2 // 触发：fn()函数重新执行
+// state.c = 5 // 会触发：fn()函数重新执行！！
+
+// // 7.1. 函数套函数（组件套组件），框架里很常见
+// function fn() {
+//   console.log('fn');
+//   effect(() => {
+//     console.log('inner');
+//     state.a
+//   })
+//   state.b
+// }
+
+// effect(fn);
+// /**
+//  * fn
+//  * inner
+//  */
+
+// // 7.2. 函数套函数（组件套组件），框架里很常见
+// function fn() {
+//   console.log('fn');
+//   effect(() => {
+//     console.log('inner');
+//     state.a
+//   })
+//   state.b
+// }
+
+// effect(fn);
+// state.a = 10
+// /**
+//  * fn
+//  * inner
+//  * inner 【state.a = 10导致的】
+//  */
+
+// // 7.3. 模拟一个执行栈 effectStack = []
+// function fn() {
+//   console.log('fn');
+//   effect(() => {
+//     console.log('inner');
+//     state.a
+//   })
+//   state.b
+// }
+
+// effect(fn);
+// state.b = 10 // expect: 重新执行fn()函数。但没有。因为【相当于执行栈】 activeEffect = fn(其实是effectFn) ---->  activeEffect = inner ----> activeEffect = null ----> 导致收集不到state.b的依赖
+// /**
+//  * fn
+//  * inner
+//  */
+// // ---->  模拟一个执行栈 effectStack = []，之后的输出
+// /**
+//  * fn
+//  * inner
+//  * fn
+//  * inner
+//  */
+
+// // 8. state.a++  ----> 爆栈
+// function fn() {
+//   console.log('fn');
+//   // state.a++;
+//   state.a = state.a + 1; // Uncaught RangeError: Maximum call stack size exceeded。因为state.a触发依赖收集get，state.a触发set ----> state.a触发依赖收集get，state.a触发set ----> state.a触发依赖收集get，state.a触发set ----> state.a触发依赖收集get，state.a触发set ----> ……爆栈
+//   // 如果state.a触发依赖收集是当前这个函数fn()【即effectFn === activeEffect】，就return
+// }
+
+// effect(fn);
+
+// // 9.1. 功能增强：不立即执行函数
+// function fn() {
+//   console.log('fn');
+// }
+
+// const effectFn = effect(fn, {
+//   lazy: true,
+// });
+// effectFn()
+
+// 9.2. 功能增强：控制执行次数（类似于框架最后只渲染一次）
 function fn() {
-  console.log('fn');
-  if(state.a === 1) {
-    state.b
-  }else {
-    state.c
-  }
+  console.log("fn");
 }
 
-effect(fn); // 触发：fn()函数重新执行
-state.a = 2 // 触发：fn()函数重新执行
-state.c = 5 // 会触发：fn()函数重新执行！！
+let runOne = true;
+const effectFn = effect(fn, {
+  lazy: true,
+  scheduler: (eff) => {
+    // console.log('scheduler');
+    Promise.then(() => {
+      if (runOne) {
+        eff();
+      }
+      runOne = false;
+    });
+  },
+});
+
+effectFn();
+
+// state.a++; // Uncaught TypeError: effectFns is not iterable
+state.a = 5; 

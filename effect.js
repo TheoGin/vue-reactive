@@ -1,6 +1,5 @@
 import { TrackOpTypes, TriggerOpTypes } from "./operations.js";
 
-let shoudTrack = true; // 是否应该依赖收集
 
 /**
  * 对象1：propMap
@@ -9,25 +8,48 @@ let shoudTrack = true; // 是否应该依赖收集
  */
 const targetMap = new WeakMap();
 let activeEffect = undefined;
-// 
+// 迭代没有key，手动加
 const ITERATE_KEY = Symbol('iter')
+// 模拟一个执行栈 
+const effectStack = []
 
-export function effect(fn) {
+let shoudTrack = true; // 是否应该依赖收集
+
+// 暂停依赖收集
+export function pauseTracking() {
+    shoudTrack = false;
+}
+
+// 恢复依赖收集
+export function resumeTracking() {
+    shoudTrack = true;
+}
+
+export function effect(fn, options) {
+    const { lazy } = options;
     function effectFn() {
         try{
             activeEffect = effectFn;
+            effectStack.push(effectFn); // 还要入栈，避免嵌套调用effect(fn)时，导致丢失
             // 每次调用前先清除之前收集的依赖，以便重新依赖收集。
             cleanup(effectFn);
             // 为啥还要return ？
             return fn(); // fn函数里面用到某个响应式数据，就会触发依赖收集
         } finally {
             // 函数可能报错，无论如何都要执行下面这行代码
-            activeEffect = null;
+            // activeEffect = null;
+            // 不能设置为null，会导致嵌套调用effect(fn)时，effectFn丢失
+            effectStack.pop()
+            activeEffect = effectStack[effectStack.length - 1];
         }
     }
     // 给effectFn加一个属性，记录哪些集合存着effectFn。即effectFn.depSet = [第一个集合，第二个集合，……]。通过这种方式重新依赖收集。
     effectFn.depSet = [] // 用来记录哪些集合存着effectFn
-    effectFn();
+    effectFn.options = options;
+    if(!lazy) { // 函数不延迟执行
+        effectFn();
+    }
+    return effectFn; // 函数延迟执行，返回让用户决定什么时候执行
 }
 
 // 清除之前收集的依赖
@@ -44,15 +66,6 @@ function cleanup(effectFn) {
     depSet.length = 0;
 }
 
-// 暂停依赖收集
-export function pauseTracking() {
-    shoudTrack = false;
-}
-
-// 恢复依赖收集
-export function resumeTracking() {
-    shoudTrack = true;
-}
 
 // 依赖收集
 export function track(target, type, key){
@@ -84,8 +97,7 @@ export function track(target, type, key){
     }
     if(!depSet.has(activeEffect)) {
         depSet.add(activeEffect);
-        // effectFn.depSet = [第一个集合，第二个集合，……]。通过这种方式重新依赖收集。
-        activeEffect.depSet.push(depSet)
+        activeEffect.depSet.push(depSet); // effectFn.depSet = [第一个集合，第二个集合，……]。通过这种方式重新依赖收集。
     }
     // console.log(targetMap);
 
@@ -103,7 +115,10 @@ export function track(target, type, key){
 export function trigger(target, type, key) {
     const effectFns = getEffectFns(target, type, key);
     for (const effectFn of effectFns) {
-        effectFn();
+        // 依赖收集是当前这个函数fn()，就return
+        if(effectFn === activeEffect) return;
+        effectFn.options.scheduler(effectFn)
+        // effectFn();
     }
     // console.log(`%c派发更新[${type}]`, 'color: #00f', key); // #00f蓝色
 }
