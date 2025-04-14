@@ -1,16 +1,19 @@
 import { TrackOpType } from "./operations.js";
 
-let shoudTracking = true;
+let shoudTrack = true; // 是否应该依赖收集
+// 暂停依赖收集
 export function pauseTracking() {
-    shoudTracking = false;
+    shoudTrack = false;
 }
+
+// 恢复依赖收集
 export function resumeTracking() {
-    shoudTracking = true;
+    shoudTrack = true;
 }
 
 // 依赖收集
 export function track(target, type, key){
-    if(!shoudTracking) { 
+    if(!shoudTrack) { 
         // 不依赖收集
         return;
     }

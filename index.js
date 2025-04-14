@@ -90,25 +90,25 @@ import { reactive } from "./reactive.js";
 //    */
 // }
 
-// 2-7. 嵌套对象找，数组中明明有obj，但却返回-1，因为state[1]是：Proxy(Object) {}代理对象；而obj是： {}原始对象。 ---> 从代理对象中找，如果找不到再从原始对象找（改写查找方法的this）
-// const obj = {}
-// const arr = [1, obj, 3];
-// const state = reactive(arr);
-// function fn() {
-//   // console.log(state[1], obj); // Proxy(Object) {} {}
-//   console.log(state.indexOf(obj));
-//   /**
-//    * 依赖收集[get] indexOf
-//    * 依赖收集[get] length
-//    * 依赖收集[has] 0
-//    * 依赖收集[get] 0
-//    * 依赖收集[has] 1
-//    * 依赖收集[get] 1
-//    * 依赖收集[has] 2
-//    * 依赖收集[get] 2
-//    * -1
-//    */
-// }
+// 2-7. 嵌套对象找，数组中明明有obj，但却返回-1，因为state[1]是：Proxy(Object) {}代理对象；而obj是： {}原始对象。 ---> 从代理对象中找，如果找不到再从原始对象找（改写查找方法的this）【第二种方法：传入的原始对象转换为代理对象】
+const obj = {}
+const arr = [1, obj, 3];
+const state = reactive(arr);
+function fn() {
+  // console.log(state[1], obj); // Proxy(Object) {} {}
+  console.log(state.indexOf(obj));
+  /**
+   * 依赖收集[get] indexOf
+   * 依赖收集[get] length
+   * 依赖收集[has] 0
+   * 依赖收集[get] 0
+   * 依赖收集[has] 1
+   * 依赖收集[get] 1
+   * 依赖收集[has] 2
+   * 依赖收集[get] 2
+   * -1   有问题，应为1
+   */
+}
 
 // 3. 写信息：派发更新
 // // 3-1. 通过下标更改state[0] = 5已有值的值————> set
@@ -137,7 +137,7 @@ import { reactive } from "./reactive.js";
 //    */
 // }
 
-// // 3-3. 通过 length变大 改变数组
+// // 3-4. 通过 length变大 改变数组
 // const arr = [1, 2, 3, 4, 5, 6];
 // const state = reactive(arr);
 // function fn() {
@@ -145,7 +145,7 @@ import { reactive } from "./reactive.js";
 //   console.log(state);
 // }
 
-// // 3-3. 通过 length变小 改变数组
+// // 3-5. 通过 length变小 改变数组
 // const arr = [1, 2, 3, 4, 5, 6];
 // const state = reactive(arr);
 // function fn() {
@@ -159,7 +159,7 @@ import { reactive } from "./reactive.js";
 //    */
 // }
 
-// // 3-3. 通过 push 改变数组
+// // 3-6.1. 通过 push 改变数组
 // const arr = [1, 2, 3, 4, 5, 6];
 // const state = reactive(arr);
 // function fn() {
@@ -174,16 +174,16 @@ import { reactive } from "./reactive.js";
 //    */
 // }
 
-// 3-3. 通过 "pop", "unshift", "shift", "splice" 和push类似 改变数组
-const arr = [1, 2, 3, 4, 5, 6];
-const state = reactive(arr);
-function fn() {
-  // state.pop() // 删除数组最后一个元素
-  // state.shift() // 删除数组第一个元素
-  // state.unshift(11) // 向数组开头添加元素11
-  // console.log(state.splice(1)); // splice(start) 从下标1开始删除，一直到最后，state剩下：Proxy(Array) {0: 1}
-  console.log(state.splice(1, 3)); // splice(start, deleteCount) 从下标1开始删除，删3个，state剩下：Proxy(Array) {0: 1, 1: 5, 2: 6}
-  console.log(state);
-}
+// // 3-6.2. 通过 "pop", "unshift", "shift", "splice" 和push类似 改变数组
+// const arr = [1, 2, 3, 4, 5, 6];
+// const state = reactive(arr);
+// function fn() {
+//   // state.pop() // 删除数组最后一个元素
+//   // state.shift() // 删除数组第一个元素
+//   // state.unshift(11) // 向数组开头添加元素11
+//   // console.log(state.splice(1)); // splice(start) 从下标1开始删除，一直到最后，state剩下：Proxy(Array) {0: 1}
+//   console.log(state.splice(1, 3)); // splice(start, deleteCount) 从下标1开始删除，删3个，state剩下：Proxy(Array) {0: 1, 1: 5, 2: 6}
+//   console.log(state);
+// }
 
 fn();

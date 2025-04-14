@@ -11,12 +11,13 @@ import { hasChanged, isObject } from "./utils.js";
 // 每个方法里面做的事情一样————》
 const arrayInstrumentations = {};
 const RAW = Symbol("raw"); // 要加分号！！！
+
 ["includes", "lastIndexOf", "indexOf"].forEach((key) => {
   arrayInstrumentations[key] = function (...args) {
     // this ---> Proxy
-    // 1. 从代理对象中找
+    // 1. 正常找（从代理对象中找）
     const res = Array.prototype[key].apply(this, args);
-    // 2. 如果找不到再从原始对象找
+    // 2. 找不到，从原始对象中重新找一遍
     if (res < 0 || res === false) {
       // lastIndexOf, lastIndexOf没找到返回-1 或者！！！ includes没找到返回false
       return Array.prototype[key].apply(this[RAW], args); // this.RAW错误写法；应该this[RAW]，会调用get，就会触发key === RAW
@@ -56,7 +57,7 @@ function get(target, key, receiver) {
   if (isObject(result)) {
     // key是对象（嵌套对象），再递归调reactive
     // 不能写成isObject(key)，这样写key是string类型，就不可能是对象
-    return reactive(result); // 要return？
+    return reactive(result); // 要return？√
   }
   return result; // 返回对象的相应属性值
 }
@@ -89,17 +90,18 @@ function set(target, key, value, receiver) {
     // 派发更新
     trigger(target, type, key);
     // 设置的不是length属性 派发更新后需要做的事情
-    // 1. target是一个数组
-    // 2. length前后值不一样
+    // 1. 设置的对象target是一个数组
+    // 2. 设置前后length值发生了变化
     if (Array.isArray(target) && oldLen !== newLen) {
       if (key !== "length") {
         // 3. 设置的不是length属性
-        // ————》手动触发length
+        // ————》手动触发length属性的变化
         trigger(target, TriggerOpType.SET, "length");
       } else {
         // 设置是length属性
         // length变小，手动触发delete
         for (let i = newLen; i < oldLen; i++) {
+          // 找到那些被删除的下标，依次触发派发更新
           trigger(target, TriggerOpType.DELETE, i.toString()); // i.toString() 保持key都是字符串
         }
       }
