@@ -256,23 +256,33 @@ const state = reactive(obj);
 // 9.2. 功能增强：控制执行次数（类似于框架最后只渲染一次）
 function fn() {
   console.log("fn");
+  state.a = state.a + 1;
 }
 
-let runOne = true;
+let isRun = false;
 const effectFn = effect(fn, {
   lazy: true,
   scheduler: (eff) => {
     // console.log('scheduler');
-    Promise.then(() => {
-      if (runOne) {
+    Promise.resolve().then(() => {
+      if (!isRun) {
+        isRun = true; // 控制只执行一次
         eff();
       }
-      runOne = false;
     });
   },
 });
 
 effectFn();
 
-// state.a++; // Uncaught TypeError: effectFns is not iterable
-state.a = 5; 
+state.a++; 
+state.a++; 
+state.a++; 
+state.a++; 
+state.a++; 
+state.a++; 
+state.a++; 
+state.a++; 
+state.a++; 
+state.a++; 
+state.a++; 
