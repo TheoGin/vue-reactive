@@ -1,16 +1,19 @@
 import { reactive } from "./reactive.js";
 import { effect } from "./effect.js";
-import { ref } from "./ref.js";
+import { computed } from "./computed.js";
 
-const state = ref(1)
 
-effect(() => {
-  console.log('effect', state.value);
+const obj = {
+  a: 1,
+  b: 2
+}
+
+const state = reactive(obj)
+
+const sum = computed(() => {
+  console.log('computed');
+  return state.a + state.b;
 })
 
-state.value++;
-
-/**
- * effect 1
- * effect 2
- */
+console.log(sum.value);
+// state.a++;
